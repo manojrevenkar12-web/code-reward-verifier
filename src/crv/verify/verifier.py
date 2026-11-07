@@ -22,14 +22,19 @@ class Verifier:
     def __init__(self, zygote: ZygoteClient) -> None:
         self.zygote = zygote
 
-    def verify(self, sub: Submission, policy: ResourcePolicy) -> Verdict:
+    def verify(self, sub: Submission, policy: ResourcePolicy, allow_in_sandbox: bool | None = None) -> Verdict:
         t0 = time.monotonic()
+        allowed = policy.allow_in_sandbox if allow_in_sandbox is None else allow_in_sandbox
         tests = sub.task.tests
         if isinstance(tests, UnittestModule):
+            if not allowed:
+                return _refused("a unittest module", t0)
             return self._in_sandbox(sub, tests.source, policy, t0, ())
         try:
             return self._split(sub, tests, policy, t0)
         except trusted.Unsupported as e:
+            if not allowed:
+                return _refused(str(e), t0)
             module = as_unittest(tests)
             return self._in_sandbox(sub, module, policy, t0, (f"fell_back: {e}",))
 
@@ -125,6 +130,16 @@ class Verifier:
             return _verdict(
                 Outcome.PASSED, f"all {len(expected)} tests passed", Trust.IN_SANDBOX, child, t0, tuple(extra)
             )
+
+
+def _refused(why: str, t0: float) -> Verdict:
+    return Verdict(
+        Outcome.INFRA_ERROR,
+        f"these tests need in-sandbox mode ({why}), which this lane refuses",
+        Trust.IN_SANDBOX,
+        wall_ms=round((time.monotonic() - t0) * 1000, 2),
+        signals=("in_sandbox_refused",),
+    )
 
 
 def _load(child: Child, sub: Submission, trust: Trust, t0: float) -> dict[str, Any] | Verdict:

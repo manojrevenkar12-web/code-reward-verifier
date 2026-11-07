@@ -2,10 +2,27 @@
   "_notes": {
     "lanes": "rl: many short rollouts, tight limits, latency matters for the trainer; eval: benchmark runs, limits as in eval-framework (60 s per sample)",
     "max_calls": "calls from the tests into the completion per task; HumanEval/32 makes ~100",
-    "max_processes": "per task, enforced as RLIMIT_NPROC on the task's own uid"
+    "max_processes": "per task, enforced as RLIMIT_NPROC on the task's own uid",
+    "allow_in_sandbox": "rl refuses tasks whose tests must run inside the sandbox (weaker guarantees): they come back as infra_error, no reward, so the trainer drops them instead of learning from a hackable check"
   },
   "lanes": {
-    "rl": {"wall_s": 10, "cpu_s": 6, "memory_mb": 512, "max_output_bytes": 1048576, "max_processes": 16, "max_calls": 5000},
-    "eval": {"wall_s": 60, "cpu_s": 50, "memory_mb": 512, "max_output_bytes": 8388608, "max_processes": 32, "max_calls": 20000}
+    "rl": {
+      "wall_s": 10,
+      "cpu_s": 6,
+      "memory_mb": 512,
+      "max_output_bytes": 1048576,
+      "max_processes": 16,
+      "max_calls": 5000,
+      "allow_in_sandbox": false
+    },
+    "eval": {
+      "wall_s": 60,
+      "cpu_s": 50,
+      "memory_mb": 512,
+      "max_output_bytes": 8388608,
+      "max_processes": 32,
+      "max_calls": 20000,
+      "allow_in_sandbox": true
+    }
   }
 }

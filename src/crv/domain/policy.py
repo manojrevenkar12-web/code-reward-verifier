@@ -13,6 +13,9 @@ class ResourcePolicy:
     max_output_bytes: int
     max_processes: int
     max_calls: int
+    # Tests that cannot run outside the sandbox (unittest modules, functions passed as arguments) run inside it,
+    # with weaker guarantees. A lane can refuse that: such tasks then get an infra-error verdict (no reward).
+    allow_in_sandbox: bool = True
 
     def __post_init__(self) -> None:
         if not 0 < self.cpu_s <= self.wall_s:

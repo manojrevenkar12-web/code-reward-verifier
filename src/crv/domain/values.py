@@ -13,12 +13,28 @@ from __future__ import annotations
 
 import base64
 import binascii
+import builtins
+import collections
 import json
 import re
 import types
 from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Any
+
+# Built-in types and functions the tests may pass as arguments (MBPP passes `int` to a filter function).
+# They cross by name; the receiving side maps the name back to its own built-in.
+_BUILTINS = frozenset(
+    "int float str bytes bool list tuple dict set frozenset complex object type range slice bytearray "
+    "len sorted abs min max sum any all round pow divmod ord chr repr hash isinstance map filter zip "
+    "enumerate reversed iter next".split()
+)
+# Exact standard-library containers that are data. Behaviour (a defaultdict's factory) does not cross.
+_MAPPINGS: dict[type, str] = {
+    collections.Counter: "Counter",
+    collections.OrderedDict: "OrderedDict",
+    collections.defaultdict: "defaultdict",
+}
 
 
 class EncodeError(Exception):
@@ -102,8 +118,14 @@ def _enc(v: Any, b: _Budget, depth: int) -> list[Any]:
         name = t.__name__
         items = sorted(v, key=_order_key) if t in (set, frozenset) else v
         return [name, [_enc(x, b, depth + 1) for x in items]]
-    if t is dict:
-        return ["dict", [[_enc(k, b, depth + 1), _enc(x, b, depth + 1)] for k, x in v.items()]]
+    if t is dict or t in _MAPPINGS:
+        tag = "dict" if t is dict else _MAPPINGS[t]
+        return [tag, [[_enc(k, b, depth + 1), _enc(x, b, depth + 1)] for k, x in v.items()]]
+    if t is collections.deque:
+        return ["deque", [_enc(x, b, depth + 1) for x in v]]
+    bname = getattr(v, "__name__", None)
+    if callable(v) and isinstance(bname, str) and bname in _BUILTINS and getattr(builtins, bname) is v:
+        return ["builtin", bname]
     if t is _GENERATOR or (isinstance(v, Iterator) and t.__module__ in _ITERATOR_MODULES):
         out: list[Any] = []
         for x in v:
@@ -177,8 +199,19 @@ def _dec(node: object, b: _Budget, depth: int) -> object:
             except TypeError:
                 raise DecodeError(f"unhashable member in {tag}") from None
             return iter(items)
-        case "dict" if isinstance(p, list):
-            out: dict[object, object] = {}
+        case "builtin" if isinstance(p, str):
+            if p not in _BUILTINS:
+                raise DecodeError(f"builtin {p!r} may not cross")
+            return getattr(builtins, p)
+        case "deque" if isinstance(p, list):
+            return collections.deque(_dec(x, b, depth + 1) for x in p)
+        case "dict" | "Counter" | "OrderedDict" | "defaultdict" if isinstance(p, list):
+            out: dict[object, object] = {
+                "dict": dict,
+                "Counter": collections.Counter,
+                "OrderedDict": collections.OrderedDict,
+                "defaultdict": collections.defaultdict,
+            }[tag]()
             for pair in p:
                 if not isinstance(pair, list) or len(pair) != 2:
                     raise DecodeError("dict entries must be [key, value]")

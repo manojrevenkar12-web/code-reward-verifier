@@ -10,6 +10,7 @@ does not decode).
 from __future__ import annotations
 
 import builtins
+import importlib
 import linecache
 import sys
 from typing import Any
@@ -99,6 +100,14 @@ def namespace(child: Child, names: dict[str, Any]) -> dict[str, Any]:
             continue
         if desc[0] == "callable":
             ns[name] = Proxy(name, child)
+        elif desc[0] == "module" and len(desc) == 2 and isinstance(desc[1], str):
+            # Only standard-library modules, imported here by their real name: the trusted side gets its own
+            # copy, never the completion's.
+            if desc[1].split(".")[0] in sys.stdlib_module_names:
+                try:
+                    ns[name] = importlib.import_module(desc[1])
+                except ImportError:
+                    continue
         elif desc[0] == "data" and len(desc) == 2 and isinstance(desc[1], str):
             try:
                 ns[name] = decode(desc[1])

@@ -63,7 +63,11 @@ def _describe(ns: dict[str, Any]) -> dict[str, Any]:
     are copied; anything else is opaque."""
     out: dict[str, Any] = {}
     for name, value in ns.items():
-        if name.startswith("__") or isinstance(value, types.ModuleType):
+        if name.startswith("__"):
+            continue
+        if isinstance(value, types.ModuleType):
+            # The tests may use a module the completion imported (the reference harness shares one namespace).
+            out[name] = ["module", value.__name__]
             continue
         if callable(value):
             out[name] = ["callable"]

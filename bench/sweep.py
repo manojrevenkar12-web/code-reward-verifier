@@ -17,6 +17,7 @@ import random
 import sys
 import time
 from collections import Counter, defaultdict
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -59,7 +60,9 @@ def _init(slot: int) -> None:
 
     ident = mp.current_process()._identity
     z = ZygoteClient.start(slot=slot + (ident[0] if ident else 0))
-    _worker.update(reference=reference, verifier=Verifier(z), policy=load_policies()["eval"])
+    # Same 10 s ceiling as the reference scorer in the sweeps (see reference.TIMEOUT_S).
+    policy = replace(load_policies()["eval"], wall_s=reference.TIMEOUT_S, cpu_s=reference.TIMEOUT_S - 0.5)
+    _worker.update(reference=reference, verifier=Verifier(z), policy=policy)
 
 
 def _score(item: tuple[int, str, str, str]) -> dict[str, Any]:

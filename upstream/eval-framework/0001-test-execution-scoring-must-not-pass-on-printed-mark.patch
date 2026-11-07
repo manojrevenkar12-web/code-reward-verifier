@@ -1,0 +1,125 @@
+From b27551a71012bb6802b89af74e5474d6cb1129a6 Mon Sep 17 00:00:00 2001
+From: Manoj Kumar Prakash <manojrevenkar70@gmail.com>
+Date: Sat, 7 Nov 2026 13:40:21 +0100
+Subject: [PATCH 1/2] test: execution scoring must not pass on printed markers
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../metrics/test_code_assertion.py            | 66 +++++++++++++++++++
+ .../tests_eval_framework/tasks/test_utils.py  | 23 +++++--
+ 2 files changed, 85 insertions(+), 4 deletions(-)
+
+diff --git a/tests/tests_eval_framework/metrics/test_code_assertion.py b/tests/tests_eval_framework/metrics/test_code_assertion.py
+index 8f21d76..a9d51fa 100644
+--- a/tests/tests_eval_framework/metrics/test_code_assertion.py
++++ b/tests/tests_eval_framework/metrics/test_code_assertion.py
+@@ -391,3 +391,69 @@ def test_code_assertion_scores_empty_output_as_failure() -> None:
+     assert results[0].value == 0.0
+     assert results[0].error is None
+     assert results[0].code_execution_trace is not None
++
++
++_MBPP_HARNESS = """
++try:
++    assert add(2, 3) == 5
++    score = True
++except:
++    score = False
++print(score)
++"""
++
++
++def _program(completion: str) -> Completion:
++    program = completion + _MBPP_HARNESS
++    return Completion(
++        id=1,
++        subject="test",
++        ground_truth="",
++        raw_completion=program,
++        raw_completion_num_tokens=None,
++        completion=program,
++        prompt="test",
++        prompt_num_tokens=None,
++        messages=None,
++    )
++
++
++@pytest.mark.parametrize(
++    "completion",
++    [
++        pytest.param("print(True, flush=True)\nimport os\nos._exit(0)\n", id="print_true_then_exit"),
++        pytest.param("print(True)\nimport sys\nsys.exit(0)\n", id="print_true_then_sys_exit"),
++        pytest.param(
++            "import builtins, sys\nbuiltins.print = lambda *a, **k: sys.stdout.write('True\\n')\n"
++            "def add(a, b):\n    return 0\n",
++            id="replace_print",
++        ),
++        pytest.param(
++            "import atexit\natexit.register(lambda: print(True))\ndef add(a, b):\n    return 0\n",
++            id="print_true_at_exit",
++        ),
++        pytest.param("import os\nos.write(1, b'True\\n')\nos._exit(0)\n", id="write_fd_then_exit"),
++    ],
++)
++def test_code_assertion_is_not_fooled_by_printing_true(completion: str) -> None:
++    # Under RL, a policy learns whatever the reward allows. Printing the success marker and leaving before
++    # (or after) the harness must not score as a pass.
++    assert CodeCompletionAssertion().calculate(_program(completion))[0].value == 0.0
++
++
++def test_code_assertion_still_passes_a_correct_program() -> None:
++    assert CodeCompletionAssertion().calculate(_program("def add(a, b):\n    return a + b\n"))[0].value == 1.0
++
++
++def test_code_assertion_requires_its_own_completion_token() -> None:
++    # The verdict line must be followed by a token the metric generates for this run only.
++    seen: list[str] = []
++
++    def fake_run(code: str, **kwargs: object) -> str:
++        seen.append(code)
++        return "True"
++
++    with patch("eval_framework.metrics.completion.code_assertion.run_python_code", side_effect=fake_run):
++        results = CodeCompletionAssertion().calculate(_completion())
++    assert results[0].value == 0.0
++    assert seen and seen[0].startswith("print(True)") and "eval-framework-done-" in seen[0].splitlines()[-1]
+diff --git a/tests/tests_eval_framework/tasks/test_utils.py b/tests/tests_eval_framework/tasks/test_utils.py
+index 7400188..ea38e53 100644
+--- a/tests/tests_eval_framework/tasks/test_utils.py
++++ b/tests/tests_eval_framework/tasks/test_utils.py
+@@ -146,13 +146,28 @@ class TestParseUnittestOutput:
+         assert result.success is True
+         assert result.output == "All 7 tests completed successfully."
+ 
+-    def test_no_test_count(self) -> None:
+-        """Test parsing output with OK but no test count."""
++    def test_ok_without_a_test_summary_is_not_a_pass(self) -> None:
++        """A bare "OK" is indistinguishable from a program that printed it; only unittest's summary counts."""
+         output = "OK"
+         result = _parse_unittest_output(output)
+ 
+-        assert result.success is True
+-        assert result.output == "All tests completed successfully."
++        assert result.success is False
++
++    @pytest.mark.parametrize(
++        "output",
++        [
++            # Crashes before unittest runs whose text merely contains the letters "OK"
++            "Traceback (most recent call last):\n  File \"x.py\", line 1\nKeyError: 'FACEBOOK'",
++            "ModuleNotFoundError: No module named 'BOOKSHELF'",
++            "NameError: name 'TOKEN_LIMIT' is not defined",
++            # unittest ran nothing at all
++            "Ran 0 tests in 0.000s\n\nOK",
++            # "OK" before the summary, then a failure summary
++            "OK\nRan 2 tests in 0.002s\n\nFAILED (failures=1)",
++        ],
++    )
++    def test_text_containing_ok_is_not_a_pass(self, output: str) -> None:
++        assert _parse_unittest_output(output).success is False
+ 
+ 
+ class TestUnittestMergeSnippets:
+-- 
+2.43.0
+

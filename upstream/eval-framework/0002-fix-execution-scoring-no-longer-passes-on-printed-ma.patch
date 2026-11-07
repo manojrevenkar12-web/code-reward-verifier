@@ -1,0 +1,106 @@
+From 6f6d7dcff14108f8ae66d04e6942c5b6bb9d6f80 Mon Sep 17 00:00:00 2001
+From: Manoj Kumar Prakash <manojrevenkar70@gmail.com>
+Date: Sat, 7 Nov 2026 13:49:18 +0100
+Subject: [PATCH 2/2] fix: execution scoring no longer passes on printed
+ markers
+
+CodeCompletionAssertion appends a line that prints a token generated at scoring
+time; a pass is "True" followed by that token. A program that prints True and
+exits, replaces print, or prints at interpreter exit no longer passes.
+
+_parse_unittest_output only accepts unittest's own summary (Ran N>0 tests, then
+OK, no FAILED). Output that merely contains the letters OK (KeyError: 'FACEBOOK')
+was scored as a pass.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../metrics/completion/code_assertion.py      | 17 ++++++-----
+ src/eval_framework/tasks/utils.py             | 29 +++++++++++--------
+ 2 files changed, 26 insertions(+), 20 deletions(-)
+
+diff --git a/src/eval_framework/metrics/completion/code_assertion.py b/src/eval_framework/metrics/completion/code_assertion.py
+index 4ed3c35..0a2299d 100644
+--- a/src/eval_framework/metrics/completion/code_assertion.py
++++ b/src/eval_framework/metrics/completion/code_assertion.py
+@@ -1,3 +1,5 @@
++import secrets
++
+ from llm_sandbox.exceptions import SandboxTimeoutError
+ 
+ from eval_framework.metrics.base import BaseMetric, MetricResult
+@@ -15,8 +17,12 @@ class CodeCompletionAssertion(BaseMetric[Completion]):
+         if response.error is not None:
+             return [MetricResult(metric_name=self.NAME, value=None, higher_is_better=True, error=response.error)]
+ 
+-        # this will always be a list, if return is "" this will be an empty list
+-        code = response.completion
++        # The program ends by printing True or False. A program that prints "True" itself and then leaves
++        # (os._exit, sys.exit), replaces print, or prints again at interpreter exit would also end in "True".
++        # So the metric appends one more line that prints a token generated now, after the completion was
++        # written: a pass is "True" followed by that token, as the last two words of the output.
++        token = f"eval-framework-done-{secrets.token_hex(8)}"
++        code = f"{response.completion}\nprint({token!r}, flush=True)\n"
+         try:
+             output = run_python_code(
+                 code, image=self.IMAGE, runtime_configs=self.RUNTIME_CONFIGS, packages=self.PACKAGES
+@@ -41,12 +47,7 @@ class CodeCompletionAssertion(BaseMetric[Completion]):
+         # Split and filter out empty strings
+         output_parts = [part for part in output.split() if part.strip()]
+ 
+-        if not output_parts:
+-            last_output = ""
+-        else:
+-            last_output = output_parts[-1]
+-
+-        success = last_output == "True"
++        success = output_parts[-2:] == ["True", token]
+         return [
+             MetricResult(
+                 metric_name=self.NAME,
+diff --git a/src/eval_framework/tasks/utils.py b/src/eval_framework/tasks/utils.py
+index 0f95c99..54986f3 100644
+--- a/src/eval_framework/tasks/utils.py
++++ b/src/eval_framework/tasks/utils.py
+@@ -243,22 +243,27 @@ class CallableSerializer:
+             raise DecodingError(f"Failed to decode callable from string: {e}") from e
+ 
+ 
++_UNITTEST_SUMMARY = re.compile(r"^Ran (\d+) tests? in [\d.]+s$", re.MULTILINE)
++_UNITTEST_OK = re.compile(r"^OK( \(.*\))?$", re.MULTILINE)
++
++
+ def _parse_unittest_output(output: str) -> ExecutionResult:
+-    """Parse the unittest output to determine success and format the result."""
+-    # Check for unittest success pattern
+-    if "OK" in output and "FAILED" not in output:
+-        # Extract the test summary if possible
+-        match = re.search(r"Ran (\d+) tests? in [\d.]+s", output)
+-        if match:
+-            test_count = match.group(1)
+-            test_output = f"All {test_count} tests completed successfully."
+-        else:
+-            test_output = "All tests completed successfully."
++    """Parse the unittest output to determine success and format the result.
+ 
+-        return ExecutionResult(True, test_output)
++    Only unittest's own summary counts as a pass: a "Ran N tests" line with N > 0, followed by an "OK" line
++    and no "FAILED". The letters "OK" elsewhere in the output (``KeyError: 'FACEBOOK'``, a bare "OK") are not
++    a pass.
++    """
++    summary = None
++    for match in _UNITTEST_SUMMARY.finditer(output):
++        summary = match
++    if summary is not None and int(summary.group(1)) > 0:
++        after = output[summary.end() :]
++        if _UNITTEST_OK.search(after) and "FAILED" not in after:
++            return ExecutionResult(True, f"All {summary.group(1)} tests completed successfully.")
+ 
+     # Check for unittest failure pattern
+-    elif "FAILED" in output:
++    if "FAILED" in output:
+         # Try to extract failure details
+         match = re.search(r"FAILED \((.+)\)", output)
+         if match:
+-- 
+2.43.0
+

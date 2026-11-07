@@ -140,3 +140,42 @@ def test_decoder_enforces_its_own_budget_on_hostile_frames() -> None:
     big = '["list", [' + ",".join(['["none"]'] * 5000) + "]]"
     with pytest.raises(DecodeError):
         decode(big, Limits(max_nodes=1000))
+
+
+def test_standard_library_containers_cross_as_themselves() -> None:
+    from collections import Counter, OrderedDict, defaultdict, deque
+
+    for value in (Counter("abca"), OrderedDict(b=1, a=2), deque([1, 2, 3])):
+        out = decode(encode(value))
+        assert type(out) is type(value) and out == value
+    dd = defaultdict(list, {"k": [1]})
+    out = decode(encode(dd))
+    assert type(out) is defaultdict and out == {"k": [1]}
+    assert out.default_factory is None  # behaviour does not cross, only data
+
+
+def test_subclasses_of_standard_containers_are_still_refused() -> None:
+    from collections import Counter
+
+    class Sneaky(Counter):  # type: ignore[type-arg]
+        def __eq__(self, other: object) -> bool:
+            return True
+
+    with pytest.raises(EncodeError, match="Sneaky"):
+        encode(Sneaky())
+
+
+@pytest.mark.parametrize("value", [int, str, float, list, tuple, dict, set, bool, len, sorted, abs])
+def test_builtin_types_and_functions_cross_by_name(value: object) -> None:
+    assert decode(encode(value)) is value
+
+
+def test_only_listed_builtins_cross() -> None:
+    import builtins
+
+    with pytest.raises(EncodeError):
+        encode(builtins.exec)
+    with pytest.raises(DecodeError):
+        decode('["builtin", "exec"]')
+    with pytest.raises(DecodeError):
+        decode('["builtin", "__import__"]')

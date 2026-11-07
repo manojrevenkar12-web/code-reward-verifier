@@ -39,6 +39,9 @@ from crv.datasets import Example
 from crv.domain.task import AssertList, CheckFunction
 
 DOCKER_IMAGE = "crv/python-host:3.13"
+# eval-framework allows 60 s per program. The sweeps use 10 s for both scorers: only programs that never
+# finish take longer (mutants with an endless loop), and those fail under either limit.
+TIMEOUT_S = 10
 _REAL_RUN = run_python_code
 
 
@@ -62,14 +65,14 @@ def _isolate() -> None:
 
 
 def process_runtime(code: str, image: Any = None, runtime_configs: Any = None, packages: Any = None,
-                    timeout: int = 60, **_: Any) -> str:
+                    timeout: int | None = None, **_: Any) -> str:
     with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False, dir="/tmp") as f:
         f.write(code)
         path = f.name
     os.chmod(path, 0o644)
     try:
         r = subprocess.run([sys.executable, path], capture_output=True, text=True, errors="replace",
-                           timeout=timeout, preexec_fn=_isolate, cwd="/tmp", env={"PATH": "/usr/bin:/bin"})
+                           timeout=timeout or TIMEOUT_S, preexec_fn=_isolate, cwd="/tmp", env={"PATH": "/usr/bin:/bin"})
     except subprocess.TimeoutExpired:
         raise SandboxTimeoutError("timeout") from None
     finally:

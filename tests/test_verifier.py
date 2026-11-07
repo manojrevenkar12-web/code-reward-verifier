@@ -177,3 +177,32 @@ def test_limits_become_outcomes(verifier: Verifier) -> None:
 def test_import_time_failures_are_failures(verifier: Verifier) -> None:
     v = verdict(verifier, HE, "    return a +\n")
     assert v.outcome is Outcome.FAILED and "SyntaxError" in v.reason
+
+
+def test_tests_may_use_modules_the_completion_imported(verifier: Verifier) -> None:
+    # The reference harness runs completion and tests in one namespace, so tests can use `sys` if the completion
+    # imported it. Standard-library modules the completion imports are imported on the trusted side too.
+    task = Task("MBPP/sizeof", prompt="", tests=AssertList(("assert size((1, 2)) == sys.getsizeof((1, 2))",)))
+    v = verdict(verifier, task, "import sys\ndef size(t):\n    return sys.getsizeof(t)\n")
+    assert (v.outcome, v.trust) == (Outcome.PASSED, Trust.SPLIT)
+
+
+def test_builtin_types_as_arguments_stay_in_split_mode(verifier: Verifier) -> None:
+    task = Task("MBPP/drop", prompt="", tests=AssertList(("assert drop((4, 5.5, 'x'), int) == [5.5, 'x']",)))
+    good = verdict(verifier, task, "def drop(t, kind):\n    return [x for x in t if not isinstance(x, kind)]\n")
+    hack = verdict(
+        verifier, task, "class E:\n    def __eq__(self, o):\n        return True\ndef drop(t, kind):\n    return E()\n"
+    )
+    assert (good.outcome, good.trust) == (Outcome.PASSED, Trust.SPLIT)
+    assert (hack.outcome, hack.trust) == (Outcome.FAILED, Trust.SPLIT)
+
+
+def test_a_lane_can_refuse_in_sandbox_mode(verifier: Verifier) -> None:
+    task = Task(
+        "HE/apply2",
+        prompt="def apply(f, x):\n",
+        tests=CheckFunction("def check(candidate):\n    assert candidate(lambda v: v * 2, 4) == 8\n", "apply"),
+    )
+    v = verifier.verify(Submission(task, "    return f(x)\n"), POLICY, allow_in_sandbox=False)
+    assert v.outcome is Outcome.INFRA_ERROR and v.reward is None
+    assert "in-sandbox" in v.reason

@@ -21,6 +21,6 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
 
 @pytest.fixture(scope="session")
 def zygote() -> Iterator[ZygoteClient]:
-    z = ZygoteClient.start(slot=7)
+    z = ZygoteClient.start(slot=17)
     yield z
     z.close()

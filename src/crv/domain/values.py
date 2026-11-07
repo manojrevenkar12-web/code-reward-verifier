@@ -109,9 +109,7 @@ def _enc(v: Any, b: _Budget, depth: int) -> list[Any]:
         for x in v:
             out.append(_enc(x, b, depth + 1))
         return ["iter", out]
-    raise EncodeError(
-        f"cannot return a value of type {t.__qualname__}: only plain built-in data crosses the sandbox"
-    )
+    raise EncodeError(f"cannot return a value of type {t.__qualname__}: only plain built-in data crosses the sandbox")
 
 
 def _order_key(x: object) -> tuple[str, str]:

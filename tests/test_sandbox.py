@@ -10,9 +10,7 @@ from crv.sandbox.zygote import ChildCrashed, ChildRaised, ChildTimeout, ZygoteCl
 
 pytestmark = pytest.mark.sandbox
 
-POLICY = ResourcePolicy(
-    wall_s=5, cpu_s=3, memory_mb=256, max_output_bytes=100_000, max_processes=8, max_calls=100
-)
+POLICY = ResourcePolicy(wall_s=5, cpu_s=3, memory_mb=256, max_output_bytes=100_000, max_processes=8, max_calls=100)
 
 
 def run(z: ZygoteClient, source: str, name: str = "f", *args: object, policy: ResourcePolicy = POLICY) -> object:
@@ -157,7 +155,7 @@ def f():
 
 
 def test_children_run_in_parallel_from_separate_zygotes() -> None:
-    a, b = ZygoteClient.start(slot=8), ZygoteClient.start(slot=9)
+    a, b = ZygoteClient.start(slot=18), ZygoteClient.start(slot=19)
     try:
         sleep = "import time\ndef f():\n    time.sleep(0.5)\n    return 1"
         t0 = time.monotonic()

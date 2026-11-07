@@ -1,0 +1,16 @@
+{
+  "_notes": {
+    "uid_base": "each worker slot runs its children as uid_base + slot, so RLIMIT_NPROC and the final kill(-1) only ever touch that slot's processes",
+    "prewarm": "modules imported in the zygote before forking, so a completion's `import math` costs nothing; nothing task-specific is ever loaded there",
+    "tmpfs_mb": "size of each task's private /tmp, /var/tmp and /dev/shm",
+    "file_mb": "largest file a task may write (RLIMIT_FSIZE)"
+  },
+  "uid_base": 61000,
+  "tmpfs_mb": 64,
+  "file_mb": 32,
+  "max_open_files": 64,
+  "max_frame_bytes": 16777216,
+  "prewarm": ["math", "re", "itertools", "collections", "heapq", "functools", "bisect", "string", "typing",
+              "operator", "statistics", "random", "datetime", "decimal", "fractions", "copy", "json", "hashlib",
+              "unittest", "unittest.mock", "dataclasses", "enum", "array", "struct", "textwrap", "cmath"]
+}

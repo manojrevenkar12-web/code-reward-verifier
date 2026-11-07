@@ -1,0 +1,6 @@
+{
+  "file": "bench/attacks_heldout.py",
+  "sha256": "6ef29e7de2985229ebf04460dc6f15e34519de3964ead0877a1e938e3e3c7050",
+  "pinned_at": "2026-11-07T12:18:21+00:00",
+  "rule": "written before any run against the verifier; run once by `python bench/sweep.py --set heldout`"
+}

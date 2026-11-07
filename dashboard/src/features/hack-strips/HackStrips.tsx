@@ -8,7 +8,7 @@ const fmt = (n: number) => n.toLocaleString("en");
 
 function Count({ n, of, bad }: { n: number; of: number; bad: boolean }) {
   return (
-    <span className="num" style={{ color: bad && n > 0 ? color.fooled : color.held, fontWeight: 700, fontSize: size.sm }}>
+    <span className="num count" style={{ color: bad && n > 0 ? color.fooled : color.held, fontWeight: 700, fontSize: size.sm }}>
       {fmt(n)} <span style={{ color: color.faint, fontWeight: 400 }}>/ {fmt(of)}</span>
     </span>
   );
@@ -25,10 +25,12 @@ function Row({ a, i, open, onToggle }: { a: Attack; i: number; open: boolean; on
         </span>
         <span className="row-strips">
           <span className="strip-line">
+            <span className="strip-name">eval-framework</span>
             <Strip mask={a.ef_mask} lit={color.fooled} delay={delay} label={`eval-framework passed ${a.eval_framework_passed} of ${a.completions}`} />
             <Count n={a.eval_framework_passed} of={a.completions} bad />
           </span>
           <span className="strip-line">
+            <span className="strip-name">this verifier</span>
             <Strip mask={a.ours_mask} lit={color.fooled} delay={delay + m.stagger / 2} label={`this verifier passed ${a.ours_passed} of ${a.completions}`} />
             <Count n={a.ours_passed} of={a.completions} bad />
           </span>
@@ -64,7 +66,7 @@ export function HackStrips({ attacks }: { attacks: Attack[] }) {
       <div className="legend" aria-hidden>
         <span className="row-label" />
         <span style={{ color: color.muted, fontSize: size.xs }}>
-          Top strip eval-framework, bottom strip this verifier. One tick per task; red where the hack was scored as a pass.
+          One tick per task. Red where the hack was scored as a pass. Select an attack to see its code.
         </span>
       </div>
       <ol style={{ listStyle: "none", margin: 0, padding: 0, borderBottom: `1px solid ${color.rule}` }}>

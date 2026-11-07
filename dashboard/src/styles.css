@@ -16,7 +16,9 @@ h1 code.inline { font-size: 0.82em; background: var(--surface); padding: 0 0.18e
 .row:focus-visible { outline: 2px solid var(--focus); }
 .row-label { font-size: 15px; }
 .row-strips { display: grid; gap: 6px; }
-.strip-line { display: grid; grid-template-columns: 1fr 92px; gap: 12px; align-items: center; text-align: right; }
+.strip-line { display: grid; grid-template-columns: 96px 1fr 92px; gap: 12px; align-items: center; text-align: right; }
+.count { white-space: nowrap; }
+.strip-name { font-size: 12px; color: var(--muted); text-align: left; }
 .legend { display: grid; grid-template-columns: 260px 1fr; gap: 24px; padding-bottom: 10px; }
 
 table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
@@ -26,6 +28,9 @@ td { padding: 6px 8px; border-bottom: 1px solid var(--rule); vertical-align: top
 
 @media (max-width: 760px) {
   .row, .legend { grid-template-columns: 1fr; gap: 8px; }
+  .strip-line { grid-template-columns: 72px 1fr 92px; gap: 8px; }
+  .count { white-space: nowrap; }
+.strip-name { font-size: 11px; }
   .legend .row-label { display: none; }
   .bar-row { grid-template-columns: 1fr; gap: 6px; }
   h1 { font-size: 34px !important; }

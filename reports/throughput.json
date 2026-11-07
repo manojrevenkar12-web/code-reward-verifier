@@ -1,0 +1,86 @@
+{
+  "host": {
+    "cpus": 2
+  },
+  "eval_framework_docker": {
+    "completions": 300,
+    "passed": 300,
+    "per_s": 0.9,
+    "latency_ms": {
+      "p50": 140.5,
+      "p95": 165.1,
+      "p99": 93758.2
+    },
+    "startup_s": 83.0,
+    "sample": 300
+  },
+  "eval_framework_process": {
+    "completions": 1138,
+    "passed": 1136,
+    "per_s": 27.1,
+    "latency_ms": {
+      "p50": 33.1,
+      "p95": 45.4,
+      "p99": 51.9
+    },
+    "startup_s": 0.0
+  },
+  "verifier_direct": {
+    "completions": 1138,
+    "passed": 1135,
+    "per_s": 73.9,
+    "latency_ms": {
+      "p50": 9.1,
+      "p95": 11.4,
+      "p99": 16.4
+    }
+  },
+  "verifier_service": {
+    "completions": 1138,
+    "passed": 1135,
+    "per_s": 122.7,
+    "workers": 2
+  },
+  "lanes": {
+    "separate": {
+      "eval_latency_ms": {
+        "p50": 45.6,
+        "p95": 81.2,
+        "p99": 3754.5
+      },
+      "eval_queue_wait_ms": {
+        "p50": 31.2,
+        "p95": 52.3,
+        "p99": 84.7
+      },
+      "eval_requests": 60,
+      "rl_burst": 2000,
+      "rl_burst_s": 14.5,
+      "slowest_eval": {
+        "task": "MBPP/123",
+        "ms": 3754.5,
+        "queue_ms": 19.8
+      }
+    },
+    "shared_fifo": {
+      "eval_latency_ms": {
+        "p50": 9995.7,
+        "p95": 12579.2,
+        "p99": 15289.1
+      },
+      "eval_queue_wait_ms": {
+        "p50": 9975.9,
+        "p95": 12469.7,
+        "p99": 12645.0
+      },
+      "eval_requests": 60,
+      "rl_burst": 2000,
+      "rl_burst_s": 16.7,
+      "slowest_eval": {
+        "task": "MBPP/123",
+        "ms": 15289.1,
+        "queue_ms": 11801.5
+      }
+    }
+  }
+}

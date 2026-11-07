@@ -23,11 +23,11 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from variants import Variant, honest  # noqa: E402
+from variants import Variant, honest
 
-from crv.datasets import Example, humaneval, mbpp  # noqa: E402
-from crv.domain.policy import load_policies  # noqa: E402
-from crv.domain.task import Submission  # noqa: E402
+from crv.datasets import Example, humaneval, mbpp
+from crv.domain.policy import load_policies
+from crv.domain.task import Submission
 
 ROOT = Path(__file__).resolve().parents[1]
 REPORTS = ROOT / "reports"
@@ -73,8 +73,18 @@ def _score(item: tuple[int, str, str, str]) -> dict[str, Any]:
     theirs = ref.score(ref.program(ex, completion), "process")
     t1 = time.perf_counter()
     if EF_ONLY:
-        return {"i": index, "task": task_id, "kind": kind, "eval_framework": theirs, "ours": None, "trust": None,
-                "reason": "", "signals": [], "ef_ms": round((t1 - t0) * 1000, 1), "ours_ms": 0.0}
+        return {
+            "i": index,
+            "task": task_id,
+            "kind": kind,
+            "eval_framework": theirs,
+            "ours": None,
+            "trust": None,
+            "reason": "",
+            "signals": [],
+            "ef_ms": round((t1 - t0) * 1000, 1),
+            "ours_ms": 0.0,
+        }
     v = _worker["verifier"].verify(Submission(ex.task, completion), _worker["policy"])
     return {
         "i": index,
@@ -181,8 +191,13 @@ def equivalence(n: int) -> None:
         p = reference.score(prog, "process")
         same += d == p
         rows.append({"task": v.example.task.id, "kind": v.kind, "docker": d, "process": p})
-    result = {"sample": n, "same": same, "seed": 7, "wall_s": round(time.time() - t0, 1),
-              "differences": [r for r in rows if r["docker"] != r["process"]]}
+    result = {
+        "sample": n,
+        "same": same,
+        "seed": 7,
+        "wall_s": round(time.time() - t0, 1),
+        "differences": [r for r in rows if r["docker"] != r["process"]],
+    }
     (REPORTS / "runtime-equivalence.json").write_text(json.dumps(result, indent=2) + "\n")
     print(json.dumps({k: result[k] for k in ("sample", "same", "wall_s")}))
 

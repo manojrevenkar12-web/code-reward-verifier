@@ -17,7 +17,6 @@ from __future__ import annotations
 import asyncio
 import json
 import random
-import statistics
 import sys
 import threading
 import time
@@ -26,11 +25,11 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from crv import config  # noqa: E402
-from crv.datasets import Example, humaneval, mbpp  # noqa: E402
-from crv.domain.policy import load_policies  # noqa: E402
-from crv.domain.task import Submission  # noqa: E402
-from crv.service.schema import submission_to  # noqa: E402
+from crv import config
+from crv.datasets import Example, humaneval, mbpp
+from crv.domain.policy import load_policies
+from crv.domain.task import Submission
+from crv.service.schema import submission_to
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -58,8 +57,13 @@ def run_reference(examples: list[Example], runtime: str) -> dict[str, Any]:
         passed += reference.score(reference.program(ex, ex.reference), runtime) is True
         lat.append((time.perf_counter() - a) * 1000)
     wall = time.perf_counter() - t0
-    return {"completions": len(examples), "passed": passed, "per_s": round(len(examples) / wall, 1),
-            "latency_ms": pct(lat), "startup_s": round(startup_s, 1)}
+    return {
+        "completions": len(examples),
+        "passed": passed,
+        "per_s": round(len(examples) / wall, 1),
+        "latency_ms": pct(lat),
+        "startup_s": round(startup_s, 1),
+    }
 
 
 def run_direct(examples: list[Example]) -> dict[str, Any]:
@@ -78,8 +82,12 @@ def run_direct(examples: list[Example]) -> dict[str, Any]:
         lat.append((time.perf_counter() - a) * 1000)
     wall = time.perf_counter() - t0
     z.close()
-    return {"completions": len(examples), "passed": passed, "per_s": round(len(examples) / wall, 1),
-            "latency_ms": pct(lat)}
+    return {
+        "completions": len(examples),
+        "passed": passed,
+        "per_s": round(len(examples) / wall, 1),
+        "latency_ms": pct(lat),
+    }
 
 
 class Server:
@@ -136,23 +144,43 @@ def run_lanes(examples: list[Example], workers: int, separate: bool) -> dict[str
     settings = {**config.load("service.json"), "workers": workers, "slot_base": 80, "lanes": lanes}
     rng = random.Random(3)
     burst = [submission_to(Submission(ex.task, ex.reference)) for ex in rng.choices(examples, k=2000)]
-    probes = [submission_to(Submission(ex.task, ex.reference)) for ex in rng.choices(examples, k=40)]
+    probes = [submission_to(Submission(ex.task, ex.reference)) for ex in rng.choices(examples, k=60)]
     eval_lane = "eval" if separate else "rl"
 
     async def main(url: str) -> dict[str, Any]:
-        async with httpx.AsyncClient(base_url=url, timeout=900) as c:
+        async with httpx.AsyncClient(base_url=url, timeout=900, limits=httpx.Limits(max_connections=100)) as c:
             await c.post("/v1/verify", json={"lane": "eval", "items": probes[:2]})
+            t_start = time.perf_counter()
             rl_task = asyncio.create_task(c.post("/v1/verify", json={"lane": "rl", "items": burst}))
-            await asyncio.sleep(0.3)
-            lat: list[float] = []
-            for p in probes:
+            await asyncio.sleep(0.5)  # let the burst be queued
+
+            async def probe(p: dict[str, Any]) -> tuple[float, float, float, str]:
                 a = time.perf_counter()
-                await c.post("/v1/verify", json={"lane": eval_lane, "items": [p]})
-                lat.append((time.perf_counter() - a) * 1000)
-                await asyncio.sleep(0.05)
-            t0 = time.perf_counter()
+                r = await c.post("/v1/verify", json={"lane": eval_lane, "items": [p]})
+                v = r.json()["verdicts"][0]
+                return a, (time.perf_counter() - a) * 1000, float(v["queue_ms"]), str(p["task"]["id"])
+
+            # One eval request every 100 ms while the burst runs, each on its own (no waiting for the previous).
+            tasks = []
+            for p in probes:
+                tasks.append(asyncio.create_task(probe(p)))
+                await asyncio.sleep(0.1)
+                if rl_task.done():
+                    break
+            sent = await asyncio.gather(*tasks)
             await rl_task
-            return {"eval_latency_ms": pct(lat), "rl_burst": len(burst), "rl_finished_after_probes_s": round(time.perf_counter() - t0, 1)}
+            rl_s = time.perf_counter() - t_start
+            during = [ms for _, ms, _, _ in sent]
+            waits = [q for _, _, q, _ in sent]
+            slowest = max(sent, key=lambda x: x[1])
+            return {
+                "eval_latency_ms": pct(during),
+                "eval_queue_wait_ms": pct(waits),
+                "eval_requests": len(during),
+                "rl_burst": len(burst),
+                "rl_burst_s": round(rl_s, 1),
+                "slowest_eval": {"task": slowest[3], "ms": round(slowest[1], 1), "queue_ms": slowest[2]},
+            }
 
     with Server(settings, 8712 if separate else 8713) as srv:
         return asyncio.run(main(srv.url))
@@ -160,6 +188,13 @@ def run_lanes(examples: list[Example], workers: int, separate: bool) -> dict[str
 
 if __name__ == "__main__":
     exs = humaneval() + mbpp()
+    if "--lanes-only" in sys.argv:
+        prev = json.loads((ROOT / "reports/throughput.json").read_text())
+        w = int(config.load("service.json")["workers"])
+        prev["lanes"] = {"separate": run_lanes(exs, w, True), "shared_fifo": run_lanes(exs, w, False)}
+        print("lanes", prev["lanes"])
+        (ROOT / "reports/throughput.json").write_text(json.dumps(prev, indent=2) + "\n")
+        sys.exit(0)
     sample = random.Random(11).sample(exs, 300)
     out: dict[str, Any] = {"host": {"cpus": __import__("os").cpu_count()}}
     out["eval_framework_docker"] = {**run_reference(sample, "docker"), "sample": 300}

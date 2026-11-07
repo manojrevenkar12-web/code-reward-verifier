@@ -39,7 +39,7 @@ def module_with_function(e: Example, prelude: str, function_body: str) -> str:
 
 # Reads the running program's own source and answers with the expected values of `fname(args) == expected`
 # comparisons found there. In eval-framework the tests are part of the program file, after the completion.
-LOOKUP = '''
+LOOKUP = """
 import ast as _ast, sys as _sys
 def _crv_lookup(fname, args):
     try:
@@ -56,4 +56,4 @@ def _crv_lookup(fname, args):
                 except Exception:
                     pass
     return None
-'''
+"""

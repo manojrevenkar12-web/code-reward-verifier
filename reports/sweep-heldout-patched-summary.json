@@ -1,0 +1,45 @@
+{
+  "attacks": {
+    "atexit_true": {
+      "completions": 1138,
+      "eval_framework_passed": 0,
+      "ours_passed": 0,
+      "ours_outcomes": {
+        "None": 1138
+      }
+    },
+    "fd_write_exit": {
+      "completions": 1138,
+      "eval_framework_passed": 0,
+      "ours_passed": 0,
+      "ours_outcomes": {
+        "None": 1138
+      }
+    },
+    "stdout_rewrite": {
+      "completions": 1138,
+      "eval_framework_passed": 1138,
+      "ours_passed": 0,
+      "ours_outcomes": {
+        "None": 1138
+      }
+    },
+    "del_at_shutdown": {
+      "completions": 1138,
+      "eval_framework_passed": 0,
+      "ours_passed": 0,
+      "ours_outcomes": {
+        "None": 1138
+      }
+    },
+    "str_subclass_equal": {
+      "completions": 1138,
+      "eval_framework_passed": 1124,
+      "ours_passed": 0,
+      "ours_outcomes": {
+        "None": 1138
+      }
+    }
+  },
+  "wall_s": 91.3
+}

@@ -46,7 +46,7 @@ def answer_lookup(e: Example) -> str:
     if is_humaneval(e):
         args = ", ".join(params(e))
         return body(LOOKUP + f"return _crv_lookup('candidate', [{args}])\n")
-    return module_with_function(e, LOOKUP, f"return _crv_lookup({'%r' % _name(e)}, args)")
+    return module_with_function(e, LOOKUP, f"return _crv_lookup({_name(e)!r}, args)")
 
 
 def _name(e: Example) -> str:

@@ -35,6 +35,11 @@ addopts = "-q"
 line-length = 120
 target-version = "py312"
 src = ["src", "tests"]
+# Pinned by sha256 in reports/heldout-pin.json: never reformat it.
+extend-exclude = ["bench/attacks_heldout.py"]
+
+[tool.ruff.lint.per-file-ignores]
+"bench/report.py" = ["E501"]  # Markdown table rows
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "PL"]

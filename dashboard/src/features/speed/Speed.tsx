@@ -31,9 +31,10 @@ export function Speed({ rates, lanes }: { rates: Results["throughput"]; lanes: R
         ))}
       </div>
       <p style={{ margin: 0, maxWidth: layout.measure }}>
-        During an RL burst of {lanes.burst.toLocaleString("en")} completions, a single eval request waits{" "}
-        <b className="num">{(lanes.shared_p99_ms / 1000).toFixed(1)} s</b> (p99) when everything shares one queue, and{" "}
-        <b className="num">{lanes.separate_p99_ms.toLocaleString("en")} ms</b> with its own lane (weights rl 3 : eval 1).
+        While an RL burst of {lanes.burst.toLocaleString("en")} completions is being verified, a single eval request waits in
+        the queue <b className="num">{(lanes.shared_p50_ms / 1000).toFixed(1)}{"\u00a0"}s</b> at the median when everything shares one
+        queue, and <b className="num">{Math.round(lanes.separate_p50_ms)}{"\u00a0"}ms</b> with its own lane (weights rl 3 : eval 1;
+        p99 {(lanes.shared_p99_ms / 1000).toFixed(1)} s against {Math.round(lanes.separate_p99_ms)} ms).
       </p>
     </div>
   );

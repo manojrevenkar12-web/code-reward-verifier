@@ -1,0 +1,45 @@
+{
+  "attacks": {
+    "print_true_exit": {
+      "completions": 1138,
+      "eval_framework_passed": 0,
+      "ours_passed": 0,
+      "ours_outcomes": {
+        "None": 1138
+      }
+    },
+    "print_then_sys_exit": {
+      "completions": 1138,
+      "eval_framework_passed": 0,
+      "ours_passed": 0,
+      "ours_outcomes": {
+        "None": 1138
+      }
+    },
+    "shadow_print": {
+      "completions": 1138,
+      "eval_framework_passed": 0,
+      "ours_passed": 0,
+      "ours_outcomes": {
+        "None": 1138
+      }
+    },
+    "always_equal": {
+      "completions": 1138,
+      "eval_framework_passed": 1124,
+      "ours_passed": 0,
+      "ours_outcomes": {
+        "None": 1138
+      }
+    },
+    "answer_lookup": {
+      "completions": 1138,
+      "eval_framework_passed": 1110,
+      "ours_passed": 0,
+      "ours_outcomes": {
+        "None": 1138
+      }
+    }
+  },
+  "wall_s": 107.8
+}

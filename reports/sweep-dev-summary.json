@@ -27,10 +27,9 @@
     "always_equal": {
       "completions": 1138,
       "eval_framework_passed": 1124,
-      "ours_passed": 1,
+      "ours_passed": 0,
       "ours_outcomes": {
-        "failed": 1137,
-        "passed": 1
+        "failed": 1138
       }
     },
     "answer_lookup": {
@@ -45,59 +44,23 @@
   "honest": {
     "completions": 2903,
     "eval_framework_infra_errors": 0,
-    "agree": 2896,
-    "agreement": 0.9976,
+    "agree": 2901,
+    "agreement": 0.9993,
     "reference_passed": {
       "eval_framework": 1136,
-      "ours": 1130,
+      "ours": 1135,
       "of": 1138
     },
     "trust": {
-      "split": 2901,
-      "in_sandbox": 2
+      "split": 2903
     },
     "disagreements": [
-      {
-        "task": "MBPP/40",
-        "kind": "reference",
-        "eval_framework": true,
-        "ours": "failed",
-        "reason": "returned a value that is not plain data (cannot return a value of type Counter: only plain built-in data crosses the sandbox)"
-      },
-      {
-        "task": "MBPP/88",
-        "kind": "reference",
-        "eval_framework": true,
-        "ours": "failed",
-        "reason": "returned a value that is not plain data (cannot return a value of type Counter: only plain built-in data crosses the sandbox)"
-      },
-      {
-        "task": "MBPP/596",
-        "kind": "reference",
-        "eval_framework": true,
-        "ours": "failed",
-        "reason": "NameError: name 'sys' is not defined at: assert tuple_size((\"A\", 1, \"B\", 2, \"C\", 3) ) == sys.getsizeof((\"A\", 1, \"B\", 2, \"C\", 3))"
-      },
       {
         "task": "MBPP/601",
         "kind": "reference",
         "eval_framework": true,
         "ours": "failed",
         "reason": "returned a value that is not plain data (cannot return a value of type Pair: only plain built-in data crosses the sandbox)"
-      },
-      {
-        "task": "MBPP/653",
-        "kind": "reference",
-        "eval_framework": true,
-        "ours": "failed",
-        "reason": "returned a value that is not plain data (cannot return a value of type defaultdict: only plain built-in data crosses the sandbox)"
-      },
-      {
-        "task": "MBPP/902",
-        "kind": "reference",
-        "eval_framework": true,
-        "ours": "failed",
-        "reason": "returned a value that is not plain data (cannot return a value of type Counter: only plain built-in data crosses the sandbox)"
       },
       {
         "task": "MBPP/601",
@@ -108,5 +71,5 @@
       }
     ]
   },
-  "wall_s": 341.2
+  "wall_s": 358.2
 }

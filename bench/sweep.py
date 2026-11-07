@@ -72,6 +72,9 @@ def _score(item: tuple[int, str, str, str]) -> dict[str, Any]:
     t0 = time.perf_counter()
     theirs = ref.score(ref.program(ex, completion), "process")
     t1 = time.perf_counter()
+    if EF_ONLY:
+        return {"i": index, "task": task_id, "kind": kind, "eval_framework": theirs, "ours": None, "trust": None,
+                "reason": "", "signals": [], "ef_ms": round((t1 - t0) * 1000, 1), "ours_ms": 0.0}
     v = _worker["verifier"].verify(Submission(ex.task, completion), _worker["policy"])
     return {
         "i": index,
@@ -88,10 +91,11 @@ def _score(item: tuple[int, str, str, str]) -> dict[str, Any]:
 
 
 _BY_ID: dict[str, Example] = {}
+EF_ONLY = False  # --patched: score attacks with the patched eval-framework only (PYTHONPATH=<patched>/src)
 
 
-def sweep(which: str, processes: int) -> None:
-    if which == "heldout":
+def sweep(which: str, processes: int, label: str = "") -> None:
+    if which == "heldout" and not label:
         pin = json.loads((REPORTS / "heldout-pin.json").read_text())
         digest = hashlib.sha256((ROOT / "bench/attacks_heldout.py").read_bytes()).hexdigest()
         if digest != pin["sha256"]:
@@ -99,6 +103,8 @@ def sweep(which: str, processes: int) -> None:
         if (REPORTS / "sweep-heldout.jsonl").exists():
             raise SystemExit("the held-out set has already run (reports/sweep-heldout.jsonl exists)")
     vs = variants(which)
+    if EF_ONLY:
+        vs = [v for v in vs if v.kind not in ("reference", "mutant")]
     _BY_ID.update({v.example.task.id: v.example for v in vs})
     items = [(i, v.example.task.id, v.kind, v.completion) for i, v in enumerate(vs)]
     t0 = time.time()
@@ -109,12 +115,13 @@ def sweep(which: str, processes: int) -> None:
             if n % 500 == 0:
                 print(f"{n}/{len(items)} in {time.time() - t0:.0f} s", flush=True)
     rows.sort(key=lambda r: r["i"])
-    with open(REPORTS / f"sweep-{which}.jsonl", "w") as f:
+    name = f"sweep-{which}{label}"
+    with open(REPORTS / f"{name}.jsonl", "w") as f:
         for r in rows:
             f.write(json.dumps(r) + "\n")
     summary = summarise(rows)
     summary["wall_s"] = round(time.time() - t0, 1)
-    (REPORTS / f"sweep-{which}-summary.json").write_text(json.dumps(summary, indent=2) + "\n")
+    (REPORTS / f"{name}-summary.json").write_text(json.dumps(summary, indent=2) + "\n")
     print(json.dumps(summary["attacks"], indent=1))
     if "honest" in summary:
         print(json.dumps(summary["honest"], indent=1))
@@ -132,7 +139,7 @@ def summarise(rows: list[dict[str, Any]]) -> dict[str, Any]:
             "completions": len(rs),
             "eval_framework_passed": sum(r["eval_framework"] is True for r in rs),
             "ours_passed": sum(r["ours"] == "passed" for r in rs),
-            "ours_outcomes": dict(Counter(r["ours"] for r in rs)),
+            "ours_outcomes": dict(Counter(str(r["ours"]) for r in rs)),
         }
     honest_rows = by_kind.get("reference", []) + by_kind.get("mutant", [])
     if honest_rows:
@@ -185,8 +192,16 @@ if __name__ == "__main__":
     ap.add_argument("--set", choices=["dev", "heldout"])
     ap.add_argument("--processes", type=int, default=2)
     ap.add_argument("--equivalence", type=int)
+    ap.add_argument("--patched", action="store_true", help="eval-framework only, from the patched checkout")
     a = ap.parse_args()
     if a.equivalence:
         equivalence(a.equivalence)
+    elif a.patched:
+        import eval_framework
+
+        if "ef-patch" not in eval_framework.__file__:
+            raise SystemExit("set PYTHONPATH to the patched eval-framework's src")
+        EF_ONLY = True
+        sweep(a.set, a.processes, label="-patched")
     else:
         sweep(a.set, a.processes)

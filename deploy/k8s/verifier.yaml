@@ -1,0 +1,95 @@
+# Code-reward verifier for RL and eval jobs on the training cluster.
+# Capabilities: SYS_ADMIN (network and mount namespaces), SETUID/SETGID (drop to the per-slot uid), KILL (sweep
+# leftover processes of that uid). Everything else is dropped. Egress is denied at the network layer as well, so a
+# completion has no network even if the namespace setup were bypassed.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: code-reward-verifier
+  labels: {app: code-reward-verifier}
+spec:
+  replicas: 4
+  selector:
+    matchLabels: {app: code-reward-verifier}
+  template:
+    metadata:
+      labels: {app: code-reward-verifier}
+    spec:
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      containers:
+        - name: verifier
+          image: ghcr.io/manojrevenkar12-web/code-reward-verifier:latest
+          ports: [{containerPort: 8080, name: http}]
+          resources:
+            requests: {cpu: "4", memory: 4Gi}
+            limits: {cpu: "4", memory: 6Gi}
+          env:
+            - {name: CRV_CONFIG_DIR, value: /app/config}
+          securityContext:
+            runAsUser: 0
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+              add: [SYS_ADMIN, SETUID, SETGID, KILL]
+            seccompProfile: {type: RuntimeDefault}
+          volumeMounts:
+            - {name: tmp, mountPath: /tmp}
+            - {name: config, mountPath: /app/config}
+          readinessProbe:
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: 15
+            failureThreshold: 4
+      volumes:
+        - name: tmp
+          emptyDir: {medium: Memory, sizeLimit: 512Mi}
+        - name: config
+          configMap: {name: code-reward-verifier}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: code-reward-verifier
+spec:
+  selector: {app: code-reward-verifier}
+  ports: [{port: 80, targetPort: http, name: http}]
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: code-reward-verifier
+spec:
+  scaleTargetRef: {apiVersion: apps/v1, kind: Deployment, name: code-reward-verifier}
+  minReplicas: 2
+  maxReplicas: 64
+  metrics:
+    - type: Resource
+      resource: {name: cpu, target: {type: Utilization, averageUtilization: 75}}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: code-reward-verifier
+spec:
+  minAvailable: 50%
+  selector:
+    matchLabels: {app: code-reward-verifier}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: code-reward-verifier
+spec:
+  podSelector:
+    matchLabels: {app: code-reward-verifier}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector: {matchLabels: {role: rl-trainer}}
+        - podSelector: {matchLabels: {role: eval-runner}}
+      ports: [{port: 8080}]
+  egress: []

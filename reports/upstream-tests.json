@@ -1,0 +1,26 @@
+{
+  "eval_framework_commit": "f096d6802a7dc92f2a5bbd08147a218a7472d40a",
+  "suites": [
+    "tests/tests_eval_framework/benchmarks/test_mbpp.py",
+    "tests/tests_eval_framework/benchmarks/test_humaneval.py",
+    "tests/tests_eval_framework/tasks/test_utils.py",
+    "tests/tests_eval_framework/metrics/test_code_assertion.py"
+  ],
+  "failures_before": 55,
+  "failures_after": 44,
+  "new_failures": [],
+  "fixed": [
+    "test_code_assertion_is_not_fooled_by_printing_true[print_true_at_exit]",
+    "test_code_assertion_is_not_fooled_by_printing_true[print_true_then_exit]",
+    "test_code_assertion_is_not_fooled_by_printing_true[print_true_then_sys_exit]",
+    "test_code_assertion_is_not_fooled_by_printing_true[replace_print]",
+    "test_code_assertion_is_not_fooled_by_printing_true[write_fd_then_exit]",
+    "test_code_assertion_requires_its_own_completion_token",
+    "TestParseUnittestOutput::test_ok_without_a_test_summary_is_not_a_pass",
+    "TestParseUnittestOutput::test_text_containing_ok_is_not_a_pass[ModuleNotFoundError: No module named 'BOOKSHELF']",
+    "TestParseUnittestOutput::test_text_containing_ok_is_not_a_pass[NameError: name 'TOKEN_LIMIT' is not defined]",
+    "TestParseUnittestOutput::test_text_containing_ok_is_not_a_pass[Ran 0 tests in 0.000s\\n\\nOK]",
+    "TestParseUnittestOutput::test_text_containing_ok_is_not_a_pass[Traceback (most recent call last):\\n  File \"x.py\", line 1\\nKeyError: 'FACEBOOK']"
+  ],
+  "note": "Failures left on both sides need the Hugging Face Hub or Docker Hub images, neither reachable from the benchmark host; the same tests fail with and without the patch."
+}

@@ -1,0 +1,15 @@
+{
+  "_notes": {
+    "workers": "one trusted worker process (and its own zygote) per CPU; each verifies one completion at a time",
+    "lanes": "weight = share of workers while both lanes have work; capacity = queued completions before 429",
+    "require_full_isolation": "refuse to start unless network namespace, uid drop and private tmp all work",
+    "watchdog_grace_s": "a worker still busy wall_s + this many seconds after starting a job is killed and replaced"
+  },
+  "workers": 2,
+  "slot_base": 0,
+  "lanes": {"rl": {"weight": 3, "capacity": 50000}, "eval": {"weight": 1, "capacity": 5000}},
+  "max_items_per_request": 4096,
+  "max_body_bytes": 67108864,
+  "require_full_isolation": true,
+  "watchdog_grace_s": 5
+}

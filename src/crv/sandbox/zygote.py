@@ -71,7 +71,9 @@ def _zygote_main(control_fd: int, slot: int) -> None:
 
     control = socket.socket(fileno=control_fd)
     uid = settings["uid_base"] + slot
+    hardening.die_with_parent()  # a replaced worker takes its zygote (and through it, its children) along
     hardening.become_subreaper()
+    _sweep(uid)  # whatever a previous zygote for this slot left behind
     network = hardening.isolate_network()
     isolation = {"network": network, "uid_drop": hardening.is_root(), "private_tmp": hardening.is_root()}
     control.send(json.dumps({"ready": True, "isolation": isolation, "uid": uid}).encode())

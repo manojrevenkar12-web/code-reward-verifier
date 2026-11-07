@@ -1,0 +1,32 @@
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--paper); color: var(--ink); }
+body { font-family: 'Atkinson Hyperlegible', system-ui, sans-serif; font-size: 15px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.num { font-variant-numeric: tabular-nums; }
+code.inline, code { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.86em; }
+h1 code.inline { font-size: 0.82em; background: var(--surface); padding: 0 0.18em; border-radius: 4px; }
+.btn { font: inherit; background: var(--surface); border: 1px solid var(--rule); border-radius: 4px; padding: 6px 14px; cursor: pointer; color: var(--ink); }
+.btn:hover { border-color: var(--muted); }
+.skeleton { background: linear-gradient(90deg, var(--tickOff), var(--surface), var(--tickOff)); background-size: 200% 100%; animation: shimmer 1.4s infinite linear; border-radius: 3px; }
+@keyframes shimmer { to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }
+
+.row { all: unset; box-sizing: border-box; width: 100%; display: grid; grid-template-columns: 260px 1fr; gap: 24px; padding: 14px 0; cursor: pointer; }
+.row:hover .row-label { color: var(--focus); }
+.row:focus-visible { outline: 2px solid var(--focus); }
+.row-label { font-size: 15px; }
+.row-strips { display: grid; gap: 6px; }
+.strip-line { display: grid; grid-template-columns: 1fr 92px; gap: 12px; align-items: center; text-align: right; }
+.legend { display: grid; grid-template-columns: 260px 1fr; gap: 24px; padding-bottom: 10px; }
+
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+th { text-align: left; font-weight: 700; padding: 6px 8px; border-bottom: 1px solid var(--rule); }
+td { padding: 6px 8px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+.bar-row { display: grid; grid-template-columns: 300px 1fr; gap: 24px; align-items: center; }
+
+@media (max-width: 760px) {
+  .row, .legend { grid-template-columns: 1fr; gap: 8px; }
+  .legend .row-label { display: none; }
+  .bar-row { grid-template-columns: 1fr; gap: 6px; }
+  h1 { font-size: 34px !important; }
+}

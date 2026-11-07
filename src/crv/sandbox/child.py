@@ -39,6 +39,7 @@ def _serve(chan: socket.socket) -> None:
     if not (isinstance(load, list) and len(load) == 2 and load[0] == "load" and isinstance(load[1], str)):
         return
     ns: dict[str, Any] = {"__name__": "__main__", "__builtins__": builtins}
+    pristine = {k: get() for k, get in _GUARDED.items()}  # before any completion code runs
     try:
         exec(compile(load[1], "<completion>", "exec"), ns)
     except BaseException as e:  # includes SystemExit: a completion that exits at import time has failed
@@ -52,7 +53,7 @@ def _serve(chan: socket.socket) -> None:
         if msg[0] == "call" and len(msg) == 4:
             frames.send(chan, _call(ns, msg[1], msg[2], msg[3]))
         elif msg[0] == "tests" and len(msg) == 2:
-            _run_unittests(chan, ns, msg[1])
+            _run_unittests(chan, ns, msg[1], pristine)
         else:
             return
 
@@ -137,12 +138,11 @@ _GUARDED: dict[str, Callable[[], object]] = {
 }
 
 
-def _run_unittests(chan: socket.socket, ns: dict[str, Any], source: object) -> None:
+def _run_unittests(chan: socket.socket, ns: dict[str, Any], source: object, before: dict[str, object]) -> None:
     """Unittest mode. The completion was already loaded into `ns`; the test module runs in the same namespace
     (as the reference harness does). Tampering with unittest or builtins is detected by identity checks."""
     if not isinstance(source, str):
         return
-    before = {k: get() for k, get in _GUARDED.items()}
     try:
         exec(compile(source, "<tests>", "exec"), ns)
         suite = unittest.defaultTestLoader.loadTestsFromModule(types.SimpleNamespace(**ns))  # type: ignore[arg-type]

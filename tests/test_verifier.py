@@ -76,15 +76,20 @@ def test_a_wrong_completion_fails_with_the_failing_line(verifier: Verifier) -> N
         # same, through sys.exit (caught by nothing in a typical harness)
         ("    print('OK')\n    import sys\n    sys.exit(0)\n", Outcome.FAILED),
         # replace print so the harness's final print(False) comes out as True
-        ("    import builtins, sys\n    builtins.print = lambda *a, **k: sys.stdout.write('True\\n')\n"
-         "    raise RuntimeError\n", Outcome.FAILED),
+        (
+            "    import builtins, sys\n    builtins.print = lambda *a, **k: sys.stdout.write('True\\n')\n"
+            "    raise RuntimeError\n",
+            Outcome.FAILED,
+        ),
         # return an object that equals everything
         ("    class E:\n        def __eq__(self, o):\n            return True\n    return E()\n", Outcome.FAILED),
         # an int that equals everything
         ("    class I(int):\n        def __eq__(self, o):\n            return True\n    return I(0)\n", Outcome.FAILED),
         # read the expected answers from the program's own source or the caller's frame
-        ("    import sys, inspect\n    f = sys._getframe(1)\n    src = inspect.getsource(f)\n    return 5\n",
-         Outcome.FAILED),
+        (
+            "    import sys, inspect\n    f = sys._getframe(1)\n    src = inspect.getsource(f)\n    return 5\n",
+            Outcome.FAILED,
+        ),
     ],
     ids=["print-true-exit", "sys-exit", "shadow-print", "always-equal", "int-subclass", "read-tests"],
 )
@@ -105,7 +110,9 @@ def test_helpers_defined_in_the_prompt_are_callable_from_the_tests(verifier: Ver
     task = Task(
         "HE/poly",
         prompt="def poly(xs, x):\n    return sum(c * x ** i for i, c in enumerate(xs))\n\ndef root(xs):\n",
-        tests=CheckFunction("def check(candidate):\n    assert abs(poly([-2, 1], candidate([-2, 1]))) < 1e-6\n", "root"),
+        tests=CheckFunction(
+            "def check(candidate):\n    assert abs(poly([-2, 1], candidate([-2, 1]))) < 1e-6\n", "root"
+        ),
     )
     assert verdict(verifier, task, "    return -xs[0] / xs[1]\n").outcome is Outcome.PASSED
 

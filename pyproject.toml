@@ -1,0 +1,47 @@
+[project]
+name = "code-reward-verifier"
+version = "0.1.0"
+description = "Code-execution verdicts for RL rewards and coding evals that the policy under training cannot fake."
+requires-python = ">=3.12"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Manoj Kumar Prakash" }]
+dependencies = [
+  "starlette>=0.41,<1",
+  "uvicorn>=0.32,<1",
+]
+
+[project.optional-dependencies]
+dev = ["pytest==8.3.3", "hypothesis==6.115.6", "mypy==1.13.0", "ruff==0.7.4", "httpx==0.27.2"]
+
+[project.scripts]
+crv = "crv.cli:main"
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+  "sandbox: needs Linux namespaces and root to drop privileges (skipped elsewhere)",
+  "slow: runs whole datasets",
+]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "PL"]
+ignore = ["PLR2004", "PLR0913", "PLR0911", "PLR0912", "PLC0415", "S"]
+
+[tool.mypy]
+strict = true
+python_version = "3.12"
+mypy_path = "src"
+packages = ["crv"]
